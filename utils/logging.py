@@ -1,8 +1,9 @@
+# -*- coding: utf-8 -*-
 
 import logging
 import os
 
-from parallel import is_master
+from supar.utils.parallel import is_master
 from tqdm import tqdm
 
 
@@ -41,4 +42,4 @@ def progress_bar(iterator,
                 leave=leave)
 
 
-logger = get_logger('teste')
+logger = get_logger('supar')

@@ -1,10 +1,13 @@
+# -*- coding: utf-8 -*-
+
 import torch
-from fn import pad, stripe
+from supar.utils.fn import pad, stripe
 
 
 def kmeans(x, k, max_it=32):
     r"""
     KMeans algorithm for clustering the sentences by length.
+
     Args:
         x (list[int]):
             The list of sentence lengths.
@@ -14,10 +17,12 @@ def kmeans(x, k, max_it=32):
         max_it (int):
             Maximum number of iterations.
             If centroids does not converge after several iterations, the algorithm will be early stopped.
+
     Returns:
         list[float], list[list[int]]:
             The first list contains average lengths of sentences in each cluster.
             The second is the list of clusters holding indices of data points.
+
     Examples:
         >>> x = torch.randint(10,20,(10,)).tolist()
         >>> x
@@ -75,11 +80,14 @@ def kmeans(x, k, max_it=32):
 def tarjan(sequence):
     r"""
     Tarjan algorithm for finding Strongly Connected Components (SCCs) of a graph.
+
     Args:
         sequence (list):
             List of head indices.
+
     Yields:
         A list of indices that make up a SCC. All self-loops are ignored.
+
     Examples:
         >>> next(tarjan([2, 5, 0, 3, 1]))  # (1 -> 5 -> 2 -> 1) is a cycle
         [2, 5, 1]
@@ -128,20 +136,26 @@ def tarjan(sequence):
 def chuliu_edmonds(s):
     r"""
     ChuLiu/Edmonds algorithm for non-projective decoding.
+
     Some code is borrowed from `tdozat's implementation`_.
     Descriptions of notations and formulas can be found in
     `Non-projective Dependency Parsing using Spanning Tree Algorithms`_.
+
     Notes:
         The algorithm does not guarantee to parse a single-root tree.
+
     References:
         - Ryan McDonald, Fernando Pereira, Kiril Ribarov and Jan Hajic. 2005.
           `Non-projective Dependency Parsing using Spanning Tree Algorithms`_.
+
     Args:
         s (~torch.Tensor): ``[seq_len, seq_len]``.
             Scores of all dependent-head pairs.
+
     Returns:
         ~torch.Tensor:
             A tensor with shape ``[seq_len]`` for the resulting non-projective parse tree.
+
     .. _tdozat's implementation:
         https://github.com/tdozat/Parser-v3
     .. _Non-projective Dependency Parsing using Spanning Tree Algorithms:
@@ -222,10 +236,12 @@ def mst(scores, mask, multiroot=False):
     r"""
     MST algorithm for decoding non-pojective trees.
     This is a wrapper for ChuLiu/Edmonds algorithm.
+
     The algorithm first runs ChuLiu/Edmonds to parse a tree and then have a check of multi-roots,
     If ``multiroot=True`` and there indeed exist multi-roots, the algorithm seeks to find
     best single-root trees by iterating all possible single-root trees parsed by ChuLiu/Edmonds.
     Otherwise the resulting trees are directly taken as the final outputs.
+
     Args:
         scores (~torch.Tensor): ``[batch_size, seq_len, seq_len]``.
             Scores of all dependent-head pairs.
@@ -234,9 +250,11 @@ def mst(scores, mask, multiroot=False):
             The first column serving as pseudo words for roots should be ``False``.
         muliroot (bool):
             Ensures to parse a single-root tree If ``False``.
+
     Returns:
         ~torch.Tensor:
             A tensor with shape ``[batch_size, seq_len]`` for the resulting non-projective parse trees.
+
     Examples:
         >>> scores = torch.tensor([[[-11.9436, -13.1464,  -6.4789, -13.8917],
                                     [-60.6957, -60.2866, -48.6457, -63.8125],
@@ -276,18 +294,22 @@ def mst(scores, mask, multiroot=False):
 def eisner(scores, mask):
     r"""
     First-order Eisner algorithm for projective decoding.
+
     References:
         - Ryan McDonald, Koby Crammer and Fernando Pereira. 2005.
           `Online Large-Margin Training of Dependency Parsers`_.
+
     Args:
         scores (~torch.Tensor): ``[batch_size, seq_len, seq_len]``.
             Scores of all dependent-head pairs.
         mask (~torch.BoolTensor): ``[batch_size, seq_len]``.
             The mask to avoid parsing over padding tokens.
             The first column serving as pseudo words for roots should be ``False``.
+
     Returns:
         ~torch.Tensor:
             A tensor with shape ``[batch_size, seq_len]`` for the resulting projective parse trees.
+
     Examples:
         >>> scores = torch.tensor([[[-13.5026, -18.3700, -13.0033, -16.6809],
                                     [-36.5235, -28.6344, -28.4696, -31.6750],
@@ -296,6 +318,7 @@ def eisner(scores, mask):
         >>> mask = torch.tensor([[False,  True,  True,  True]])
         >>> eisner(scores, mask)
         tensor([[0, 2, 0, 2]])
+
     .. _Online Large-Margin Training of Dependency Parsers:
         https://www.aclweb.org/anthology/P05-1012/
     """
@@ -365,9 +388,11 @@ def eisner2o(scores, mask):
     r"""
     Second-order Eisner algorithm for projective decoding.
     This is an extension of the first-order one that further incorporates sibling scores into tree scoring.
+
     References:
         - Ryan McDonald and Fernando Pereira. 2006.
           `Online Learning of Approximate Dependency Parsing Algorithms`_.
+
     Args:
         scores (~torch.Tensor, ~torch.Tensor):
             A tuple of two tensors representing the first-order and second-order scores repectively.
@@ -376,9 +401,11 @@ def eisner2o(scores, mask):
         mask (~torch.BoolTensor): ``[batch_size, seq_len]``.
             The mask to avoid parsing over padding tokens.
             The first column serving as pseudo words for roots should be ``False``.
+
     Returns:
         ~torch.Tensor:
             A tensor with shape ``[batch_size, seq_len]`` for the resulting projective parse trees.
+
     Examples:
         >>> s_arc = torch.tensor([[[ -2.8092,  -7.9104,  -0.9414,  -5.4360],
                                    [-10.3494,  -7.9298,  -3.6929,  -7.3985],
@@ -403,6 +430,7 @@ def eisner2o(scores, mask):
         >>> mask = torch.tensor([[False,  True,  True,  True]])
         >>> eisner2o((s_arc, s_sib), mask)
         tensor([[0, 2, 0, 2]])
+
     .. _Online Learning of Approximate Dependency Parsing Algorithms:
         https://www.aclweb.org/anthology/E06-1011/
     """
@@ -514,17 +542,21 @@ def eisner2o(scores, mask):
 def cky(scores, mask):
     r"""
     The implementation of `Cocke-Kasami-Younger`_ (CKY) algorithm to parse constituency trees.
+
     References:
         - Yu Zhang, Houquan Zhou and Zhenghua Li. 2020.
           `Fast and Accurate Neural CRF Constituency Parsing`_.
+
     Args:
         scores (~torch.Tensor): ``[batch_size, seq_len, seq_len]``.
             Scores of all candidate constituents.
         mask (~torch.BoolTensor): ``[batch_size, seq_len, seq_len]``.
             The mask to avoid parsing over padding tokens.
             For each square matrix in a batch, the positions except upper triangular part should be masked out.
+
     Returns:
         Sequences of factorized predicted bracketed trees that are traversed in pre-order.
+
     Examples:
         >>> scores = torch.tensor([[[ 2.5659,  1.4253, -2.5272,  3.3011],
                                     [ 1.3687, -0.5869,  1.0011,  3.3020],
@@ -536,6 +568,7 @@ def cky(scores, mask):
                                   [False, False, False, False]]])
         >>> cky(scores, mask)
         [[(0, 3), (0, 1), (1, 3), (1, 2), (2, 3)]]
+
     .. _Cocke-Kasami-Younger:
         https://en.wikipedia.org/wiki/CYK_algorithm
     .. _Fast and Accurate Neural CRF Constituency Parsing:
